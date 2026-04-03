@@ -1,4 +1,4 @@
-// Initialize Telegram WebApp
+// Initialize Telegram WebApp (if available)
 if (typeof tg !== 'undefined' && tg.WebApp) {
     tg.WebApp.ready();
     tg.WebApp.expand();
@@ -19,14 +19,17 @@ let gameState = {
 };
 
 // DOM elements
+const welcomeScreen = document.getElementById('welcome-screen');
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const resultScreen = document.getElementById('result-screen');
 
 const teamBtns = document.querySelectorAll('.team-btn');
 const diffBtns = document.querySelectorAll('.diff-btn');
-const timeBtns = document.querySelectorAll('.time-btn');
+const timeSlider = document.getElementById('time-slider');
+const timeDisplay = document.getElementById('time-display');
 const startBtn = document.getElementById('start-btn');
+const toStartBtn = document.getElementById('to-start-btn');
 
 const currentTeamEl = document.getElementById('current-team');
 const teamAScoreEl = document.getElementById('team-a-score');
@@ -61,14 +64,22 @@ diffBtns.forEach(btn => {
     });
 });
 
-// Time selection
-timeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        timeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        gameState.roundTime = parseInt(btn.dataset.time);
-    });
+// Time slider
+timeSlider.addEventListener('input', (e) => {
+    gameState.roundTime = parseInt(e.target.value);
+    updateTimeDisplay();
 });
+
+function updateTimeDisplay() {
+    const seconds = gameState.roundTime;
+    if (seconds >= 60) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        timeDisplay.textContent = `${mins}м ${secs}с`;
+    } else {
+        timeDisplay.textContent = `${seconds}с`;
+    }
+}
 
 // Send to bot
 function sendToBot(data) {
@@ -100,6 +111,36 @@ if (typeof tg !== 'undefined' && tg.WebApp) {
     tg.WebApp.onEvent('web_app_data', handleBotResponse);
 }
 
+// Navigation functions
+function showWelcome() {
+    welcomeScreen.classList.add('active');
+    startScreen.classList.remove('active');
+    gameScreen.classList.remove('active');
+    resultScreen.classList.remove('active');
+}
+
+function showStart() {
+    welcomeScreen.classList.remove('active');
+    startScreen.classList.add('active');
+    gameScreen.classList.remove('active');
+    resultScreen.classList.remove('active');
+    updateTimeDisplay();
+}
+
+function showGame() {
+    welcomeScreen.classList.remove('active');
+    startScreen.classList.remove('active');
+    gameScreen.classList.add('active');
+    resultScreen.classList.remove('active');
+}
+
+function showResult() {
+    welcomeScreen.classList.remove('active');
+    startScreen.classList.remove('active');
+    gameScreen.classList.remove('active');
+    resultScreen.classList.add('active');
+}
+
 // Start game
 function startGame() {
     // Reset state
@@ -122,8 +163,7 @@ function startGame() {
     startTimer();
     
     // Switch screens
-    startScreen.classList.remove('active');
-    gameScreen.classList.add('active');
+    showGame();
 }
 
 // Timer
@@ -197,17 +237,16 @@ function showResults() {
         winnerEl.className = 'winner draw';
     }
     
-    gameScreen.classList.remove('active');
-    resultScreen.classList.add('active');
+    showResult();
 }
 
 // Restart game
 function restartGame() {
-    resultScreen.classList.remove('active');
-    startScreen.classList.add('active');
+    showWelcome();
 }
 
 // Event listeners
+toStartBtn.addEventListener('click', showStart);
 startBtn.addEventListener('click', startGame);
 guessedBtn.addEventListener('click', handleGuessed);
 skippedBtn.addEventListener('click', handleSkipped);
@@ -218,11 +257,7 @@ currentTeamEl.addEventListener('dblclick', switchTeam);
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if running in Telegram
-    if (typeof tg === 'undefined' || !tg.WebApp) {
-        wordEl.textContent = 'Откройте игру в Telegram';
-        actionEl.textContent = 'Эта игра доступна только в Telegram Messenger';
-        startBtn.disabled = true;
-        startBtn.textContent = '❌ Требуется Telegram';
-    }
+    console.log('Alias Game initialized');
+    showWelcome();
+    updateTimeDisplay();
 });
