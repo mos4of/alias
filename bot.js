@@ -34,23 +34,20 @@ bot.on('web_app_data', (ctx) => {
     
     if (data.action === 'start_game') {
       const difficulty = data.difficulty || 'easy';
+      const roundTime = data.roundTime || 60;
       
       // Initialize game state
       games.set(chatId, {
         difficulty,
-        score: 0,
+        roundTime,
+        teamAScore: 0,
+        teamBScore: 0,
+        currentTeam: 'A',
         usedWords: new Set()
       });
       
-      // Get first word
-      const wordList = words[difficulty];
-      const randomIndex = Math.floor(Math.random() * wordList.length);
-      const wordObj = wordList[randomIndex];
-      
-      games.get(chatId).usedWords.add(wordObj.word);
-      
-      // Send first word to user in chat
-      ctx.reply(`🎮 Игра началась!\nУровень: ${difficulty}\n\nСлово: ${wordObj.word}\nДействие: ${wordObj.action}\n\n⏱ У вас есть 60 секунд!`);
+      // Send first word
+      sendNextWord(ctx, chatId);
       
     } else if (data.action === 'guessed') {
       const game = games.get(chatId);
@@ -60,18 +57,21 @@ bot.on('web_app_data', (ctx) => {
         return;
       }
       
-      game.score++;
+      // Add point to current team
+      if (game.currentTeam === 'A') {
+        game.teamAScore++;
+      } else {
+        game.teamBScore++;
+      }
       
-      // Get next word
-      const wordList = words[game.difficulty];
-      let nextWord;
-      do {
-        nextWord = wordList[Math.floor(Math.random() * wordList.length)];
-      } while (game.usedWords.has(nextWord.word));
+      // Send updated scores
+      ctx.reply(`✅ Угадано!\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
       
-      game.usedWords.add(nextWord.word);
+      // Switch team
+      game.currentTeam = game.currentTeam === 'A' ? 'B' : 'A';
       
-      ctx.reply(`✅ Угадано! +1 очко\nСчет: ${game.score}\n\nСлово: ${nextWord.word}\nДействие: ${nextWord.action}`);
+      // Send next word
+      sendNextWord(ctx, chatId);
       
     } else if (data.action === 'skipped') {
       const game = games.get(chatId);
@@ -81,22 +81,28 @@ bot.on('web_app_data', (ctx) => {
         return;
       }
       
-      // Get next word
-      const wordList = words[game.difficulty];
-      let nextWord;
-      do {
-        nextWord = wordList[Math.floor(Math.random() * wordList.length)];
-      } while (game.usedWords.has(nextWord.word));
+      // Switch team on skip
+      game.currentTeam = game.currentTeam === 'A' ? 'B' : 'A';
       
-      game.usedWords.add(nextWord.word);
+      ctx.reply(`⏭ Пропущено\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
       
-      ctx.reply(`⏭ Пропущено\nСчет: ${game.score}\n\nСлово: ${nextWord.word}\nДействие: ${nextWord.action}`);
+      // Send next word
+      sendNextWord(ctx, chatId);
       
     } else if (data.action === 'game_over') {
       const game = games.get(chatId);
       
       if (game) {
-        ctx.reply(`🏁 Игра окончена!\nИтоговый счет: ${game.score}\n\nДля новой игры нажмите /start`);
+        let winnerText = '';
+        if (game.teamAScore > game.teamBScore) {
+          winnerText = '🏆 Победила Команда А!';
+        } else if (game.teamBScore > game.teamAScore) {
+          winnerText = '🏆 Победила Команда Б!';
+        } else {
+          winnerText = '🤝 Ничья!';
+        }
+        
+        ctx.reply(`🏁 Игра окончена!\n\n📊 Итоговый счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\n${winnerText}\n\nДля новой игры нажмите /start`);
         games.delete(chatId);
       }
     }
@@ -105,6 +111,35 @@ bot.on('web_app_data', (ctx) => {
     ctx.reply('❌ Произошла ошибка обработки данных');
   }
 });
+
+// Send next word to chat
+function sendNextWord(ctx, chatId) {
+  const game = games.get(chatId);
+  
+  if (!game) return;
+  
+  const wordList = words[game.difficulty];
+  let nextWord;
+  
+  // Check if all words used
+  if (game.usedWords.size >= wordList.length) {
+    ctx.reply('⚠️ Слова закончились! Игра завершена.\n\n📊 Счет:\nКоманда А: ' + game.teamAScore + '\nКоманда Б: ' + game.teamBScore);
+    games.delete(chatId);
+    return;
+  }
+  
+  do {
+    nextWord = wordList[Math.floor(Math.random() * wordList.length)];
+  } while (game.usedWords.has(nextWord.word));
+  
+  game.usedWords.add(nextWord.word);
+  
+  const timeText = game.roundTime >= 60
+    ? `${Math.floor(game.roundTime / 60)}:${(game.roundTime % 60).toString().padStart(2, '0')}`
+    : `${game.roundTime}с`;
+  
+  ctx.reply(`🎯 Команда ${game.currentTeam}\n\nСлово: ${nextWord.word}\nДействие: ${nextWord.action}\n\n⏱ Время: ${timeText}`);
+}
 
 bot.launch();
 

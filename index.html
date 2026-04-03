@@ -8,20 +8,95 @@
 </head>
 <body>
     <div class="container">
-        <div id="game-screen">
-            <div class="header">
-                <div class="score">Счет: <span id="score">0</span></div>
-                <div class="timer">Время: <span id="timer">60</span>с</div>
+        <!-- Start Menu -->
+        <div id="start-screen" class="screen active">
+            <div class="logo">
+                <h1>🎮 ALIAS</h1>
+                <p class="subtitle">Игра на ассоциации</p>
             </div>
             
-            <div class="word-display">
-                <div class="word" id="word">Загрузка...</div>
-                <div class="action" id="action">Откройте игру в Telegram</div>
+            <div class="section">
+                <h3>Выберите команду</h3>
+                <div class="team-selector">
+                    <button class="team-btn active" data-team="A">Команда А</button>
+                    <button class="team-btn" data-team="B">Команда Б</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>Уровень сложности</h3>
+                <div class="difficulty-selector">
+                    <button class="diff-btn active" data-diff="easy">🟢 Легкий</button>
+                    <button class="diff-btn" data-diff="medium">🟡 Средний</button>
+                    <button class="diff-btn" data-diff="hard">🔴 Сложный</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>Время на раунд</h3>
+                <div class="timer-selector">
+                    <button class="time-btn" data-time="30">30с</button>
+                    <button class="time-btn active" data-time="60">60с</button>
+                    <button class="time-btn" data-time="90">90с</button>
+                    <button class="time-btn" data-time="120">2м</button>
+                    <button class="time-btn" data-time="180">3м</button>
+                </div>
+            </div>
+            
+            <button id="start-btn" class="primary-btn">🚀 Начать игру</button>
+        </div>
+        
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div class="team-indicator">
+                    <span class="current-team" id="current-team">Команда А</span>
+                </div>
+                <div class="score-display">
+                    <div class="team-score team-a">
+                        <span>А</span>
+                        <span id="team-a-score">0</span>
+                    </div>
+                    <div class="team-score team-b">
+                        <span>Б</span>
+                        <span id="team-b-score">0</span>
+                    </div>
+                </div>
+                <div class="timer-display">
+                    <span id="timer">60</span>с
+                </div>
+            </div>
+            
+            <div class="word-card">
+                <div class="word" id="word">Слово</div>
+                <div class="action" id="action">Действие</div>
             </div>
             
             <div class="controls">
-                <button id="guessed-btn">✅ Угадали</button>
-                <button id="skipped-btn">⏭ Пропустить</button>
+                <button id="guessed-btn" class="control-btn guessed">✅ Угадали</button>
+                <button id="skipped-btn" class="control-btn skipped">⏭ Пропустить</button>
+            </div>
+        </div>
+        
+        <!-- Result Screen -->
+        <div id="result-screen" class="screen">
+            <div class="result-content">
+                <h2>🏁 Игра окончена!</h2>
+                
+                <div class="final-scores">
+                    <div class="final-score-card team-a">
+                        <h3>Команда А</h3>
+                        <p class="score" id="final-team-a">0</p>
+                    </div>
+                    <div class="final-score-card team-b">
+                        <h3>Команда Б</h3>
+                        <p class="score" id="final-team-b">0</p>
+                    </div>
+                </div>
+                
+                <div class="winner" id="winner"></div>
+                
+                <button id="play-again-btn" class="primary-btn">🔄 Играть снова</button>
             </div>
         </div>
     </div>
