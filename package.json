@@ -1,0 +1,26 @@
+{
+  "name": "alias-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot with Mini App for Alias game",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "mini-app",
+    "game",
+    "alias"
+  ],
+  "author": "Developer",
+  "license": "MIT",
+  "dependencies": {
+    "telegraf": "^4.12.0",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}

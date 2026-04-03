@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alias Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="game-screen">
+            <div class="header">
+                <div class="score">Счет: <span id="score">0</span></div>
+                <div class="timer">Время: <span id="timer">60</span>с</div>
+            </div>
+            
+            <div class="word-display">
+                <div class="word" id="word">Слово</div>
+                <div class="action" id="action">Действие</div>
+            </div>
+            
+            <div class="controls">
+                <button id="guessed-btn">Угадали</button>
+                <button id="skipped-btn">Пропустить</button>
+            </div>
+        </div>
+        
+        <div id="result-screen" class="hidden">
+            <h2>Игра окончена!</h2>
+            <div class="final-score">Ваш счет: <span id="final-score">0</span></div>
+            <button id="play-again-btn">Играть снова</button>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
