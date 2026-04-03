@@ -9,6 +9,12 @@ const games = new Map();
 
 bot.start((ctx) => {
   const webAppUrl = process.env.WEB_APP_URL;
+  
+  if (!webAppUrl) {
+    ctx.reply('❌ Ошибка: WEB_APP_URL не настроен. Обратитесь к администратору бота.');
+    return;
+  }
+  
   ctx.reply('🎮 Добро пожаловать в игру Alias!\n\nНажмите кнопку ниже чтобы открыть игру:', {
     reply_markup: {
       inline_keyboard: [
