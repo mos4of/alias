@@ -1,5 +1,5 @@
 const { Telegraf } = require('telegraf');
-const words = require('./words');
+const words = require('./words.json');
 require('dotenv').config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -29,6 +29,7 @@ bot.on('web_app_data', (ctx) => {
   try {
     const data = JSON.parse(ctx.web_app_data.data);
     const chatId = ctx.chat.id;
+    const queryId = ctx.web_app_data.query_id; // Get the query ID to respond
     
     console.log('Web app data received:', data);
     
@@ -46,8 +47,8 @@ bot.on('web_app_data', (ctx) => {
         usedWords: new Set()
       });
       
-      // Send first word
-      sendNextWord(ctx, chatId);
+      // Send first word via WebApp query response
+      sendNextWord(ctx, chatId, queryId);
       
     } else if (data.action === 'guessed') {
       const game = games.get(chatId);
@@ -64,14 +65,14 @@ bot.on('web_app_data', (ctx) => {
         game.teamBScore++;
       }
       
-      // Send updated scores
-      ctx.reply(`✅ Угадано!\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
-      
       // Switch team
       game.currentTeam = game.currentTeam === 'A' ? 'B' : 'A';
       
-      // Send next word
-      sendNextWord(ctx, chatId);
+      // Send next word via WebApp query response
+      sendNextWord(ctx, chatId, queryId);
+      
+      // Also send score update to chat
+      ctx.reply(`✅ Угадано!\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
       
     } else if (data.action === 'skipped') {
       const game = games.get(chatId);
@@ -84,10 +85,11 @@ bot.on('web_app_data', (ctx) => {
       // Switch team on skip
       game.currentTeam = game.currentTeam === 'A' ? 'B' : 'A';
       
-      ctx.reply(`⏭ Пропущено\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
+      // Send next word via WebApp query response
+      sendNextWord(ctx, chatId, queryId);
       
-      // Send next word
-      sendNextWord(ctx, chatId);
+      // Also send notification to chat
+      ctx.reply(`⏭ Пропущено\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
       
     } else if (data.action === 'game_over') {
       const game = games.get(chatId);
@@ -112,8 +114,8 @@ bot.on('web_app_data', (ctx) => {
   }
 });
 
-// Send next word to chat
-function sendNextWord(ctx, chatId) {
+// Send next word to Web App and chat
+function sendNextWord(ctx, chatId, queryId) {
   const game = games.get(chatId);
   
   if (!game) return;
@@ -138,7 +140,25 @@ function sendNextWord(ctx, chatId) {
     ? `${Math.floor(game.roundTime / 60)}:${(game.roundTime % 60).toString().padStart(2, '0')}`
     : `${game.roundTime}с`;
   
+  // Send word to chat as well
   ctx.reply(`🎯 Команда ${game.currentTeam}\n\nСлово: ${nextWord.word}\nДействие: ${nextWord.action}\n\n⏱ Время: ${timeText}`);
+  
+  // Send word to Web App via answerWebAppQuery
+  if (queryId) {
+    try {
+      ctx.answerWebAppQuery({
+        type: 'article',
+        id: Date.now().toString(),
+        title: `Слово для Команды ${game.currentTeam}`,
+        description: nextWord.word,
+        input_message_content: {
+          message_text: `🎯 Команда ${game.currentTeam}\n\nСлово: ${nextWord.word}\nДействие: ${nextWord.action}\n\n⏱ Время: ${timeText}\n\n📊 Счет: А=${game.teamAScore}, Б=${game.teamBScore}`
+        }
+      });
+    } catch (e) {
+      console.error('Error sending WebApp response:', e);
+    }
+  }
 }
 
 bot.launch();

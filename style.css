@@ -498,3 +498,148 @@ input[type="range"]::-moz-range-thumb:hover {
 .word {
     animation: pulse 2s infinite, glow 3s infinite;
 }
+
+/* Result Screen Styles */
+.trophy-animation {
+    text-align: center;
+    margin: 20px 0;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.5s ease;
+}
+
+.trophy-animation.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.trophy {
+    font-size: 5rem;
+    display: inline-block;
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
+}
+
+.trophy-a .trophy {
+    animation: bounce 1s infinite, glow 2s infinite;
+    color: #4CAF50;
+}
+
+.trophy-b .trophy {
+    animation: bounce 1s infinite, glow 2s infinite;
+    color: #FF9800;
+}
+
+.trophy-draw .trophy {
+    animation: bounce 1s infinite, glow 2s infinite;
+    color: #2196F3;
+}
+
+.result-title {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 10px;
+    text-shadow: var(--text-shadow);
+}
+
+.winner-message {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 30px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.winner.team-a {
+    color: #4CAF50;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.winner.team-b {
+    color: #FF9800;
+    text-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+}
+
+.winner.draw {
+    color: #2196F3;
+    text-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+}
+
+.final-scores {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 30px 0;
+}
+
+.final-score-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    min-width: 120px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.final-score-card:hover {
+    transform: translateY(-5px);
+}
+
+.final-score-card .team-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.final-score-card h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.final-score-card .score {
+    font-size: 3rem;
+    font-weight: bold;
+    margin: 0;
+    line-height: 1;
+}
+
+.final-score-card .score-label {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+.stats {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.stats p {
+    margin: 8px 0;
+    font-size: 1rem;
+}
+
+.stats strong {
+    color: #FFD700;
+}
+
+#play-again-btn.pulse {
+    animation: pulse-btn 2s infinite;
+}
+
+@keyframes pulse-btn {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 4px 25px rgba(255, 215, 0, 0.6);
+    }
+}

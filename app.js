@@ -4,6 +4,27 @@ if (typeof tg !== 'undefined' && tg.WebApp) {
     tg.WebApp.expand();
 }
 
+// Words data (will be loaded from JSON)
+let words = null;
+let wordsLoaded = false;
+
+// Load words from JSON
+async function loadWords() {
+    try {
+        const response = await fetch('words.json');
+        if (!response.ok) {
+            throw new Error('Failed to load words.json');
+        }
+        words = await response.json();
+        wordsLoaded = true;
+        console.log('Words loaded successfully');
+        return true;
+    } catch (error) {
+        console.error('Error loading words:', error);
+        return false;
+    }
+}
+
 // Game state
 let gameState = {
     team: 'A',
@@ -45,6 +66,10 @@ const playAgainBtn = document.getElementById('play-again-btn');
 const finalTeamAEl = document.getElementById('final-team-a');
 const finalTeamBEl = document.getElementById('final-team-b');
 const winnerEl = document.getElementById('winner');
+const trophyAnimEl = document.getElementById('trophy-animation');
+const winnerMessageEl = document.getElementById('winner-message');
+const resultTitleEl = document.getElementById('result-title');
+const statsEl = document.getElementById('stats');
 
 // Team selection
 teamBtns.forEach(btn => {
@@ -88,27 +113,37 @@ function sendToBot(data) {
     }
 }
 
-// Receive from bot
-function handleBotResponse(data) {
-    if (data.action === 'new_word') {
-        gameState.currentWord = data.word;
-        gameState.currentAction = data.action_text;
-        wordEl.textContent = gameState.currentWord;
-        actionEl.textContent = gameState.currentAction;
-        
-        // Animation
-        wordEl.style.animation = 'none';
-        void wordEl.offsetWidth;
-        wordEl.style.animation = 'pulse 0.5s';
-    } else if (data.action === 'game_over') {
-        clearInterval(gameState.timerId);
-        showResults();
+// Pick next word from words.json database
+function pickNextWord() {
+    if (!wordsLoaded || !words) {
+        console.error('Words not loaded yet');
+        return;
     }
-}
-
-// Initialize WebApp listener
-if (typeof tg !== 'undefined' && tg.WebApp) {
-    tg.WebApp.onEvent('web_app_data', handleBotResponse);
+    
+    const wordList = words[gameState.difficulty];
+    const availableWords = wordList.filter(w => !gameState.usedWords.has(w.word));
+    
+    if (availableWords.length === 0) {
+        // All words used - end game
+        sendToBot({ action: 'game_over' });
+        showResults();
+        return;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * availableWords.length);
+    const wordObj = availableWords[randomIndex];
+    
+    gameState.currentWord = wordObj.word;
+    gameState.currentAction = wordObj.action;
+    gameState.usedWords.add(wordObj.word);
+    
+    wordEl.textContent = gameState.currentWord;
+    actionEl.textContent = gameState.currentAction;
+    
+    // Animation
+    wordEl.style.animation = 'none';
+    void wordEl.offsetWidth;
+    wordEl.style.animation = 'pulse 0.5s';
 }
 
 // Navigation functions
@@ -143,11 +178,17 @@ function showResult() {
 
 // Start game
 function startGame() {
+    if (!wordsLoaded || !words) {
+        alert('Слова еще не загружены. Пожалуйста, подождите.');
+        return;
+    }
+    
     // Reset state
     gameState.teamAScore = 0;
     gameState.teamBScore = 0;
     gameState.usedWords = new Set();
     gameState.timeLeft = gameState.roundTime;
+    gameState.team = 'A'; // Reset to team A
     
     updateTeamDisplay();
     updateTimer();
@@ -158,6 +199,9 @@ function startGame() {
         difficulty: gameState.difficulty,
         roundTime: gameState.roundTime
     });
+    
+    // Pick and show first word
+    pickNextWord();
     
     // Start timer
     startTimer();
@@ -170,11 +214,17 @@ function startGame() {
 function startTimer() {
     clearInterval(gameState.timerId);
     gameState.timerId = setInterval(() => {
-        gameState.timeLeft--;
-        updateTimer();
+        if (gameState.timeLeft > 0) {
+            gameState.timeLeft--;
+            updateTimer();
+        }
         
         if (gameState.timeLeft <= 0) {
+            clearInterval(gameState.timerId);
+            gameState.timeLeft = 0;
+            updateTimer();
             sendToBot({ action: 'game_over' });
+            showResults();
         }
     }, 1000);
 }
@@ -183,11 +233,7 @@ function startTimer() {
 function updateTimer() {
     const minutes = Math.floor(gameState.timeLeft / 60);
     const seconds = gameState.timeLeft % 60;
-    if (minutes > 0) {
-        timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    } else {
-        timerEl.textContent = seconds;
-    }
+    timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 // Update team display
@@ -199,21 +245,39 @@ function updateTeamDisplay() {
 
 // Handle guessed
 function handleGuessed() {
+    // Add point to current team
     if (gameState.team === 'A') {
         gameState.teamAScore++;
     } else {
         gameState.teamBScore++;
     }
     updateTeamDisplay();
-    sendToBot({ action: 'guessed' });
+    
+    // Send to bot with team info
+    sendToBot({ action: 'guessed', team: gameState.team });
+    
+    // Switch team
+    gameState.team = gameState.team === 'A' ? 'B' : 'A';
+    updateTeamDisplay();
+    
+    // Pick next word
+    pickNextWord();
 }
 
 // Handle skipped
 function handleSkipped() {
-    sendToBot({ action: 'skipped' });
+    // Send to bot with team info
+    sendToBot({ action: 'skipped', team: gameState.team });
+    
+    // Switch team
+    gameState.team = gameState.team === 'A' ? 'B' : 'A';
+    updateTeamDisplay();
+    
+    // Pick next word
+    pickNextWord();
 }
 
-// Switch team
+// Switch team (double click)
 function switchTeam() {
     gameState.team = gameState.team === 'A' ? 'B' : 'A';
     updateTeamDisplay();
@@ -223,19 +287,59 @@ function switchTeam() {
 function showResults() {
     clearInterval(gameState.timerId);
     
+    // Update final scores
     finalTeamAEl.textContent = gameState.teamAScore;
     finalTeamBEl.textContent = gameState.teamBScore;
     
+    // Calculate total words used
+    const totalWords = gameState.usedWords.size;
+    const totalPossible = wordsLoaded && words ? words[gameState.difficulty].length : 0;
+    
+    // Determine winner and set messages
+    let winnerMessage = '';
+    let resultTitle = '🎉 Поздравляем!';
+    let trophyClass = '';
+    
     if (gameState.teamAScore > gameState.teamBScore) {
-        winnerEl.textContent = '🏆 Победила Команда А!';
+        winnerMessage = '🏆 Победила Команда А!';
         winnerEl.className = 'winner team-a';
+        trophyClass = 'trophy-a';
+        resultTitle = '🎉 Команда А — чемпионы!';
     } else if (gameState.teamBScore > gameState.teamAScore) {
-        winnerEl.textContent = '🏆 Победила Команда Б!';
+        winnerMessage = '🏆 Победила Команда Б!';
         winnerEl.className = 'winner team-b';
+        trophyClass = 'trophy-b';
+        resultTitle = '🎉 Команда Б — чемпионы!';
     } else {
-        winnerEl.textContent = '🤝 Ничья!';
+        winnerMessage = '🤝 Ничья!';
         winnerEl.className = 'winner draw';
+        trophyClass = 'trophy-draw';
+        resultTitle = '🤝 Одинаково сильные команды!';
     }
+    
+    winnerEl.textContent = winnerMessage;
+    winnerMessageEl.textContent = winnerMessage;
+    resultTitleEl.textContent = resultTitle;
+    
+    // Update stats
+    const difficultyText = {
+        'easy': 'Лёгкая',
+        'medium': 'Средняя',
+        'hard': 'Сложная'
+    };
+    
+    statsEl.innerHTML = `
+        <p>📚 Сложность: <strong>${difficultyText[gameState.difficulty]}</strong></p>
+        <p>⏱ Время: <strong>${gameState.roundTime} секунд</strong></p>
+        <p>📖 Использовано слов: <strong>${totalWords} из ${totalPossible}</strong></p>
+    `;
+    
+    // Animate trophy
+    trophyAnimEl.className = 'trophy-animation ' + trophyClass;
+    // Trigger animation
+    setTimeout(() => {
+        trophyAnimEl.classList.add('active');
+    }, 100);
     
     showResult();
 }
@@ -256,7 +360,16 @@ playAgainBtn.addEventListener('click', restartGame);
 currentTeamEl.addEventListener('dblclick', switchTeam);
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Alias Game initializing...');
+    
+    // Load words from JSON
+    const loaded = await loadWords();
+    if (!loaded) {
+        alert('Ошибка загрузки слов. Пожалуйста, обновите страницу.');
+        return;
+    }
+    
     console.log('Alias Game initialized');
     showWelcome();
     updateTimeDisplay();

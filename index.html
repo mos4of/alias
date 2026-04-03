@@ -94,22 +94,32 @@
         <!-- Result Screen -->
         <div id="result-screen" class="screen">
             <div class="result-content">
-                <h2>🏁 Игра окончена!</h2>
+                <div class="trophy-animation" id="trophy-animation">
+                    <div class="trophy">🏆</div>
+                </div>
+                
+                <h2 class="result-title" id="result-title">🎉 Поздравляем!</h2>
+                
+                <div class="winner-message" id="winner-message"></div>
                 
                 <div class="final-scores">
                     <div class="final-score-card team-a">
+                        <div class="team-icon">🔵</div>
                         <h3>Команда А</h3>
                         <p class="score" id="final-team-a">0</p>
+                        <p class="score-label">очков</p>
                     </div>
                     <div class="final-score-card team-b">
+                        <div class="team-icon">🟠</div>
                         <h3>Команда Б</h3>
                         <p class="score" id="final-team-b">0</p>
+                        <p class="score-label">очков</p>
                     </div>
                 </div>
                 
-                <div class="winner" id="winner"></div>
+                <div class="stats" id="stats"></div>
                 
-                <button id="play-again-btn" class="primary-btn">🔄 Играть снова</button>
+                <button id="play-again-btn" class="primary-btn pulse">🔄 Играть снова</button>
             </div>
         </div>
     </div>
