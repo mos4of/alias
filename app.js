@@ -26,8 +26,16 @@ async function loadWords() {
         return true;
     } catch (error) {
         console.error('Error loading words:', error);
-        alert('Ошибка загрузки слов. Пожалуйста, обновите страницу.');
-        return false;
+        // Fallback to hardcoded words to ensure game works
+        console.warn('Using fallback hardcoded words');
+        words = {
+            easy: ['кот', 'собака', 'пицца', 'машина', 'телефон', 'вода', 'дом', 'друг'],
+            medium: ['самолёт', 'робот', 'повар', 'доктор', 'шпион', 'маг', 'спортсмен'],
+            hard: ['гравитация', 'инфляция', 'иллюзия', 'харизма', 'логика', 'парадокс', 'реальность']
+        };
+        wordsLoaded = true;
+        alert('Не удалось загрузить слова. Используются встроенные слова.');
+        return true;
     }
 }
 
@@ -41,7 +49,8 @@ let gameState = {
     currentWord: null,
     timeLeft: 60,
     timerId: null,
-    usedWords: new Set()
+    usedWords: new Set(),
+    gameOver: false
 };
 
 // DOM elements
@@ -123,6 +132,12 @@ function sendToBot(data) {
 // Pick next word from words.json database
 function pickNextWord() {
     try {
+        // Don't pick if game is over
+        if (gameState.gameOver) {
+            console.log('Game is over, not picking next word');
+            return;
+        }
+        
         if (!wordsLoaded || !words) {
             console.error('Words not loaded yet');
             return;
@@ -141,6 +156,8 @@ function pickNextWord() {
             // All words used - end game
             console.log('All words used, ending game');
             clearInterval(gameState.timerId);
+            gameState.timerId = null;
+            gameState.gameOver = true;
             sendToBot({ action: 'game_over' });
             showResults();
             return;
@@ -209,6 +226,7 @@ function startGame() {
     gameState.usedWords = new Set();
     gameState.timeLeft = gameState.roundTime;
     gameState.team = 'A'; // Reset to team A
+    gameState.gameOver = false;
     
     updateTeamDisplay();
     updateTimer();
@@ -277,6 +295,12 @@ function updateTeamDisplay() {
 
 // Handle guessed
 function handleGuessed() {
+    // Ignore if game is over
+    if (gameState.gameOver) {
+        console.log('Game is over, ignoring guess');
+        return;
+    }
+    
     // Add point to current team
     if (gameState.team === 'A') {
         gameState.teamAScore++;
@@ -298,6 +322,12 @@ function handleGuessed() {
 
 // Handle skipped
 function handleSkipped() {
+    // Ignore if game is over
+    if (gameState.gameOver) {
+        console.log('Game is over, ignoring skip');
+        return;
+    }
+    
     // Send to bot with team info
     sendToBot({ action: 'skipped', team: gameState.team });
     
@@ -318,8 +348,15 @@ function switchTeam() {
 // Show results
 function showResults() {
     console.log('showResults called');
-    clearInterval(gameState.timerId);
-    gameState.timerId = null;
+    
+    // Mark game as over
+    gameState.gameOver = true;
+    
+    // Clear timer
+    if (gameState.timerId) {
+        clearInterval(gameState.timerId);
+        gameState.timerId = null;
+    }
     
     try {
         // Update final scores with null checks
