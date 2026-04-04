@@ -132,16 +132,16 @@ function sendNextWord(ctx, chatId, queryId) {
   
   do {
     nextWord = wordList[Math.floor(Math.random() * wordList.length)];
-  } while (game.usedWords.has(nextWord.word));
+  } while (game.usedWords.has(nextWord));
   
-  game.usedWords.add(nextWord.word);
+  game.usedWords.add(nextWord);
   
   const timeText = game.roundTime >= 60
     ? `${Math.floor(game.roundTime / 60)}:${(game.roundTime % 60).toString().padStart(2, '0')}`
     : `${game.roundTime}с`;
   
   // Send word to chat as well
-  ctx.reply(`🎯 Команда ${game.currentTeam}\n\nСлово: ${nextWord.word}\nДействие: ${nextWord.action}\n\n⏱ Время: ${timeText}`);
+  ctx.reply(`🎯 Команда ${game.currentTeam}\n\nСлово: ${nextWord}\n\n⏱ Время: ${timeText}`);
   
   // Send word to Web App via answerWebAppQuery
   if (queryId) {
@@ -150,9 +150,9 @@ function sendNextWord(ctx, chatId, queryId) {
         type: 'article',
         id: Date.now().toString(),
         title: `Слово для Команды ${game.currentTeam}`,
-        description: nextWord.word,
+        description: nextWord,
         input_message_content: {
-          message_text: `🎯 Команда ${game.currentTeam}\n\nСлово: ${nextWord.word}\nДействие: ${nextWord.action}\n\n⏱ Время: ${timeText}\n\n📊 Счет: А=${game.teamAScore}, Б=${game.teamBScore}`
+          message_text: `🎯 Команда ${game.currentTeam}\n\nСлово: ${nextWord}\n\n⏱ Время: ${timeText}\n\n📊 Счет: А=${game.teamAScore}, Б=${game.teamBScore}`
         }
       });
     } catch (e) {

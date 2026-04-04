@@ -33,7 +33,6 @@ let gameState = {
     teamAScore: 0,
     teamBScore: 0,
     currentWord: null,
-    currentAction: null,
     timeLeft: 60,
     timerId: null,
     usedWords: new Set()
@@ -57,7 +56,6 @@ const teamAScoreEl = document.getElementById('team-a-score');
 const teamBScoreEl = document.getElementById('team-b-score');
 const timerEl = document.getElementById('timer');
 const wordEl = document.getElementById('word');
-const actionEl = document.getElementById('action');
 
 const guessedBtn = document.getElementById('guessed-btn');
 const skippedBtn = document.getElementById('skipped-btn');
@@ -121,7 +119,7 @@ function pickNextWord() {
     }
     
     const wordList = words[gameState.difficulty];
-    const availableWords = wordList.filter(w => !gameState.usedWords.has(w.word));
+    const availableWords = wordList.filter(w => !gameState.usedWords.has(w));
     
     if (availableWords.length === 0) {
         // All words used - end game
@@ -131,14 +129,12 @@ function pickNextWord() {
     }
     
     const randomIndex = Math.floor(Math.random() * availableWords.length);
-    const wordObj = availableWords[randomIndex];
+    const word = availableWords[randomIndex];
     
-    gameState.currentWord = wordObj.word;
-    gameState.currentAction = wordObj.action;
-    gameState.usedWords.add(wordObj.word);
+    gameState.currentWord = word;
+    gameState.usedWords.add(word);
     
     wordEl.textContent = gameState.currentWord;
-    actionEl.textContent = gameState.currentAction;
     
     // Animation
     wordEl.style.animation = 'none';
