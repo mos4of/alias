@@ -63,7 +63,6 @@ const playAgainBtn = document.getElementById('play-again-btn');
 
 const finalTeamAEl = document.getElementById('final-team-a');
 const finalTeamBEl = document.getElementById('final-team-b');
-const winnerEl = document.getElementById('winner');
 const trophyAnimEl = document.getElementById('trophy-animation');
 const winnerMessageEl = document.getElementById('winner-message');
 const resultTitleEl = document.getElementById('result-title');
@@ -298,22 +297,21 @@ function showResults() {
     
     if (gameState.teamAScore > gameState.teamBScore) {
         winnerMessage = '🏆 Победила Команда А!';
-        winnerEl.className = 'winner team-a';
+        winnerMessageEl.className = 'winner team-a';
         trophyClass = 'trophy-a';
         resultTitle = '🎉 Команда А — чемпионы!';
     } else if (gameState.teamBScore > gameState.teamAScore) {
         winnerMessage = '🏆 Победила Команда Б!';
-        winnerEl.className = 'winner team-b';
+        winnerMessageEl.className = 'winner team-b';
         trophyClass = 'trophy-b';
         resultTitle = '🎉 Команда Б — чемпионы!';
     } else {
         winnerMessage = '🤝 Ничья!';
-        winnerEl.className = 'winner draw';
+        winnerMessageEl.className = 'winner draw';
         trophyClass = 'trophy-draw';
         resultTitle = '🤝 Одинаково сильные команды!';
     }
     
-    winnerEl.textContent = winnerMessage;
     winnerMessageEl.textContent = winnerMessage;
     resultTitleEl.textContent = resultTitle;
     
