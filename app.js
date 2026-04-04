@@ -106,7 +106,11 @@ function updateTimeDisplay() {
 // Send to bot
 function sendToBot(data) {
     if (typeof tg !== 'undefined' && tg.WebApp) {
-        tg.WebApp.sendData(JSON.stringify(data));
+        try {
+            tg.WebApp.sendData(JSON.stringify(data));
+        } catch (error) {
+            console.error('Failed to send data to bot:', error);
+        }
     }
 }
 
@@ -122,6 +126,7 @@ function pickNextWord() {
     
     if (availableWords.length === 0) {
         // All words used - end game
+        clearInterval(gameState.timerId);
         sendToBot({ action: 'game_over' });
         showResults();
         return;
@@ -218,6 +223,7 @@ function startTimer() {
             clearInterval(gameState.timerId);
             gameState.timeLeft = 0;
             updateTimer();
+            console.log('Timer expired, showing results');
             sendToBot({ action: 'game_over' });
             showResults();
         }
@@ -280,6 +286,7 @@ function switchTeam() {
 
 // Show results
 function showResults() {
+    console.log('showResults called');
     clearInterval(gameState.timerId);
     
     // Update final scores
