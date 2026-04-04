@@ -11,16 +11,22 @@ let wordsLoaded = false;
 // Load words from JSON
 async function loadWords() {
     try {
-        const response = await fetch('words.json');
+        // Add cache buster to prevent caching issues
+        const cacheBuster = Date.now();
+        const response = await fetch('words.json?v=' + cacheBuster);
         if (!response.ok) {
-            throw new Error('Failed to load words.json');
+            throw new Error('Failed to load words.json: ' + response.status);
         }
         words = await response.json();
         wordsLoaded = true;
-        console.log('Words loaded successfully');
+        console.log('Words loaded successfully', words);
+        console.log('Easy words count:', words.easy?.length);
+        console.log('Medium words count:', words.medium?.length);
+        console.log('Hard words count:', words.hard?.length);
         return true;
     } catch (error) {
         console.error('Error loading words:', error);
+        alert('Ошибка загрузки слов. Пожалуйста, обновите страницу.');
         return false;
     }
 }
@@ -116,34 +122,48 @@ function sendToBot(data) {
 
 // Pick next word from words.json database
 function pickNextWord() {
-    if (!wordsLoaded || !words) {
-        console.error('Words not loaded yet');
-        return;
+    try {
+        if (!wordsLoaded || !words) {
+            console.error('Words not loaded yet');
+            return;
+        }
+        
+        const wordList = words[gameState.difficulty];
+        if (!wordList) {
+            console.error('No word list for difficulty:', gameState.difficulty);
+            return;
+        }
+        
+        const availableWords = wordList.filter(w => !gameState.usedWords.has(w));
+        console.log('Picking next word. Used:', gameState.usedWords.size, 'Available:', availableWords.length);
+        
+        if (availableWords.length === 0) {
+            // All words used - end game
+            console.log('All words used, ending game');
+            clearInterval(gameState.timerId);
+            sendToBot({ action: 'game_over' });
+            showResults();
+            return;
+        }
+        
+        const randomIndex = Math.floor(Math.random() * availableWords.length);
+        const word = availableWords[randomIndex];
+        
+        gameState.currentWord = word;
+        gameState.usedWords.add(word);
+        
+        console.log('Selected word:', word);
+        
+        if (wordEl) {
+            wordEl.textContent = gameState.currentWord;
+            // Animation
+            wordEl.style.animation = 'none';
+            void wordEl.offsetWidth;
+            wordEl.style.animation = 'pulse 0.5s';
+        }
+    } catch (error) {
+        console.error('Error in pickNextWord:', error);
     }
-    
-    const wordList = words[gameState.difficulty];
-    const availableWords = wordList.filter(w => !gameState.usedWords.has(w));
-    
-    if (availableWords.length === 0) {
-        // All words used - end game
-        clearInterval(gameState.timerId);
-        sendToBot({ action: 'game_over' });
-        showResults();
-        return;
-    }
-    
-    const randomIndex = Math.floor(Math.random() * availableWords.length);
-    const word = availableWords[randomIndex];
-    
-    gameState.currentWord = word;
-    gameState.usedWords.add(word);
-    
-    wordEl.textContent = gameState.currentWord;
-    
-    // Animation
-    wordEl.style.animation = 'none';
-    void wordEl.offsetWidth;
-    wordEl.style.animation = 'pulse 0.5s';
 }
 
 // Navigation functions
@@ -212,15 +232,26 @@ function startGame() {
 
 // Timer
 function startTimer() {
-    clearInterval(gameState.timerId);
+    // Clear any existing timer
+    if (gameState.timerId) {
+        clearInterval(gameState.timerId);
+        gameState.timerId = null;
+    }
+    
+    console.log('Starting timer with', gameState.timeLeft, 'seconds');
+    
     gameState.timerId = setInterval(() => {
+        console.log('Timer tick:', gameState.timeLeft);
+        
         if (gameState.timeLeft > 0) {
             gameState.timeLeft--;
             updateTimer();
+            console.log('Time left:', gameState.timeLeft);
         }
         
         if (gameState.timeLeft <= 0) {
             clearInterval(gameState.timerId);
+            gameState.timerId = null;
             gameState.timeLeft = 0;
             updateTimer();
             console.log('Timer expired, showing results');
@@ -288,61 +319,76 @@ function switchTeam() {
 function showResults() {
     console.log('showResults called');
     clearInterval(gameState.timerId);
+    gameState.timerId = null;
     
-    // Update final scores
-    finalTeamAEl.textContent = gameState.teamAScore;
-    finalTeamBEl.textContent = gameState.teamBScore;
-    
-    // Calculate total words used
-    const totalWords = gameState.usedWords.size;
-    const totalPossible = wordsLoaded && words ? words[gameState.difficulty].length : 0;
-    
-    // Determine winner and set messages
-    let winnerMessage = '';
-    let resultTitle = '🎉 Поздравляем!';
-    let trophyClass = '';
-    
-    if (gameState.teamAScore > gameState.teamBScore) {
-        winnerMessage = '🏆 Победила Команда А!';
-        winnerMessageEl.className = 'winner team-a';
-        trophyClass = 'trophy-a';
-        resultTitle = '🎉 Команда А — чемпионы!';
-    } else if (gameState.teamBScore > gameState.teamAScore) {
-        winnerMessage = '🏆 Победила Команда Б!';
-        winnerMessageEl.className = 'winner team-b';
-        trophyClass = 'trophy-b';
-        resultTitle = '🎉 Команда Б — чемпионы!';
-    } else {
-        winnerMessage = '🤝 Ничья!';
-        winnerMessageEl.className = 'winner draw';
-        trophyClass = 'trophy-draw';
-        resultTitle = '🤝 Одинаково сильные команды!';
+    try {
+        // Update final scores with null checks
+        if (finalTeamAEl) finalTeamAEl.textContent = gameState.teamAScore;
+        if (finalTeamBEl) finalTeamBEl.textContent = gameState.teamBScore;
+        
+        // Calculate total words used
+        const totalWords = gameState.usedWords.size;
+        const totalPossible = wordsLoaded && words ? (words[gameState.difficulty]?.length || 0) : 0;
+        
+        console.log('Game stats:', { totalWords, totalPossible, difficulty: gameState.difficulty, teamAScore: gameState.teamAScore, teamBScore: gameState.teamBScore });
+        
+        // Determine winner and set messages
+        let winnerMessage = '';
+        let resultTitle = '🎉 Поздравляем!';
+        let trophyClass = '';
+        
+        if (gameState.teamAScore > gameState.teamBScore) {
+            winnerMessage = '🏆 Победила Команда А!';
+            if (winnerMessageEl) winnerMessageEl.className = 'winner team-a';
+            trophyClass = 'trophy-a';
+            resultTitle = '🎉 Команда А — чемпионы!';
+        } else if (gameState.teamBScore > gameState.teamAScore) {
+            winnerMessage = '🏆 Победила Команда Б!';
+            if (winnerMessageEl) winnerMessageEl.className = 'winner team-b';
+            trophyClass = 'trophy-b';
+            resultTitle = '🎉 Команда Б — чемпионы!';
+        } else {
+            winnerMessage = '🤝 Ничья!';
+            if (winnerMessageEl) winnerMessageEl.className = 'winner draw';
+            trophyClass = 'trophy-draw';
+            resultTitle = '🤝 Одинаково сильные команды!';
+        }
+        
+        if (winnerMessageEl) winnerMessageEl.textContent = winnerMessage;
+        if (resultTitleEl) resultTitleEl.textContent = resultTitle;
+        
+        // Update stats
+        const difficultyText = {
+            'easy': 'Лёгкая',
+            'medium': 'Средняя',
+            'hard': 'Сложная'
+        };
+        
+        if (statsEl) {
+            statsEl.innerHTML = `
+                <p>📚 Сложность: <strong>${difficultyText[gameState.difficulty]}</strong></p>
+                <p>⏱ Время: <strong>${gameState.roundTime} секунд</strong></p>
+                <p>📖 Использовано слов: <strong>${totalWords} из ${totalPossible}</strong></p>
+            `;
+        }
+        
+        // Animate trophy
+        if (trophyAnimEl) {
+            trophyAnimEl.className = 'trophy-animation ' + trophyClass;
+            // Trigger animation
+            setTimeout(() => {
+                if (trophyAnimEl) trophyAnimEl.classList.add('active');
+            }, 100);
+        }
+        
+        console.log('Calling showResult()');
+        showResult();
+        console.log('Results screen should now be visible');
+    } catch (error) {
+        console.error('Error in showResults:', error);
+        // Fallback: just show result screen
+        showResult();
     }
-    
-    winnerMessageEl.textContent = winnerMessage;
-    resultTitleEl.textContent = resultTitle;
-    
-    // Update stats
-    const difficultyText = {
-        'easy': 'Лёгкая',
-        'medium': 'Средняя',
-        'hard': 'Сложная'
-    };
-    
-    statsEl.innerHTML = `
-        <p>📚 Сложность: <strong>${difficultyText[gameState.difficulty]}</strong></p>
-        <p>⏱ Время: <strong>${gameState.roundTime} секунд</strong></p>
-        <p>📖 Использовано слов: <strong>${totalWords} из ${totalPossible}</strong></p>
-    `;
-    
-    // Animate trophy
-    trophyAnimEl.className = 'trophy-animation ' + trophyClass;
-    // Trigger animation
-    setTimeout(() => {
-        trophyAnimEl.classList.add('active');
-    }, 100);
-    
-    showResult();
 }
 
 // Restart game
