@@ -321,6 +321,7 @@ function continueToNextRound() {
     gameState.timeLeft = gameState.roundTime;
     gameState.gameOver = false;
     gameState.isPaused = false;
+    pauseBtn.textContent = '⏸️ Пауза';
     
     updateTeamDisplay();
     updateTimer();
@@ -391,9 +392,17 @@ function startTimer() {
             gameState.timerId = null;
             gameState.timeLeft = 0;
             updateTimer();
-            console.log('Timer expired, showing results');
+            console.log('Timer expired, checking target score');
             sendToBot({ action: 'game_over' });
-            showResults();
+            
+            const maxScore = Math.max(gameState.teamAScore, gameState.teamBScore);
+            if (maxScore >= gameState.targetScore) {
+                console.log('Target score reached, showing final results');
+                showResults();
+            } else {
+                console.log('Target score not reached, showing intermediate screen');
+                showIntermediate();
+            }
         }
     }, 1000);
 }
