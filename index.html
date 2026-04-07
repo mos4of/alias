@@ -27,10 +27,23 @@
         <!-- Start Menu -->
         <div id="start-screen" class="screen">
             <div class="section">
-                <h3>Выберите команду, которая ходит первой</h3>
-                <div class="team-selector">
-                    <button class="team-btn active" data-team="A">Команда А</button>
-                    <button class="team-btn" data-team="B">Команда Б</button>
+                <h3>Количество команд: <span id="team-count-display">2</span></h3>
+                <div class="slider-container">
+                    <input type="range" id="team-count-slider" min="2" max="6" value="2" step="1">
+                    <div class="slider-labels">
+                        <span>2</span>
+                        <span>3</span>
+                        <span>4</span>
+                        <span>5</span>
+                        <span>6</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>Названия команд (сгенерируются автоматически)</h3>
+                <div class="team-names-preview" id="team-names-preview">
+                    <!-- Will be populated by JS -->
                 </div>
             </div>
             
@@ -92,15 +105,8 @@
                 <button id="skipped-btn" class="control-btn skipped">⏭ Пропустить</button>
             </div>
             
-            <div class="score-display">
-                <div class="team-score team-a">
-                    <span>А</span>
-                    <span id="team-a-score">0</span>
-                </div>
-                <div class="team-score team-b">
-                    <span>Б</span>
-                    <span id="team-b-score">0</span>
-                </div>
+            <div class="score-display" id="score-display">
+                <!-- Dynamically populated with team scores -->
             </div>
             
             <div class="secondary-controls">
@@ -119,19 +125,8 @@
                 
                 <div class="winner-message" id="winner-message"></div>
                 
-                <div class="final-scores">
-                    <div class="final-score-card team-a">
-                        <div class="team-icon">🔵</div>
-                        <h3>Команда А</h3>
-                        <p class="score" id="final-team-a">0</p>
-                        <p class="score-label">очков</p>
-                    </div>
-                    <div class="final-score-card team-b">
-                        <div class="team-icon">🟠</div>
-                        <h3>Команда Б</h3>
-                        <p class="score" id="final-team-b">0</p>
-                        <p class="score-label">очков</p>
-                    </div>
+                <div class="final-scores" id="final-scores">
+                    <!-- Dynamically populated -->
                 </div>
                 
                 <div class="stats" id="stats"></div>
@@ -145,17 +140,8 @@
             <div class="intermediate-content">
                 <h2>🔄 Следующий раунд</h2>
                 
-                <div class="current-scores">
-                    <div class="score-card team-a">
-                        <div class="team-icon">🔵</div>
-                        <h3>Команда А</h3>
-                        <p class="score" id="intermediate-team-a">0</p>
-                    </div>
-                    <div class="score-card team-b">
-                        <div class="team-icon">🟠</div>
-                        <h3>Команда Б</h3>
-                        <p class="score" id="intermediate-team-b">0</p>
-                    </div>
+                <div class="current-scores" id="intermediate-scores">
+                    <!-- Dynamically populated -->
                 </div>
                 
                 <div class="next-team-info">

@@ -4,6 +4,15 @@ if (typeof tg !== 'undefined' && tg.WebApp) {
     tg.WebApp.expand();
 }
 
+// Random team names pool (Russian, fun)
+const TEAM_NAMES = [
+    'Морские котики', 'Солнечные зайки', 'Громкие пингвины', 'Быстрые лисы',
+    'Умные совы', 'Смешные медведи', 'Рыжие лисы', 'Звёздные тигры',
+    'Летающие драконы', 'Огненные единороги', 'Секретные агенты', 'Космические десантники',
+    'Супергерои', 'Весёлые обезьянки', 'Дикие волки', 'Снежные барсы',
+    'Буйные буйволы', 'Ласковые коалы', 'Хитрые хорьки', 'Мудрые черепахи'
+];
+
 // Words data (will be loaded from JSON)
 let words = null;
 let wordsLoaded = false;
@@ -41,22 +50,22 @@ async function loadWords() {
 
 // Game state
 let gameState = {
-    team: 'A',
+    teams: [], // Array of {name: string, score: number}
+    currentTeamIndex: 0,
     difficulty: 'easy',
     roundTime: 60,
     targetScore: 50,
-    teamAScore: 0,
-    teamBScore: 0,
     currentWord: null,
     timeLeft: 60,
     timerId: null,
     usedWords: new Set(),
     gameOver: false,
-    isPaused: false
+    isPaused: false,
+    teamCount: 2
 };
 
-// Track last team to alternate between games
-let lastTeam = 'A';
+// Track last team index to alternate between games
+let lastTeamIndex = 0;
 
 // DOM elements
 const welcomeScreen = document.getElementById('welcome-screen');
@@ -65,7 +74,9 @@ const gameScreen = document.getElementById('game-screen');
 const resultScreen = document.getElementById('result-screen');
 const intermediateScreen = document.getElementById('intermediate-screen');
 
-const teamBtns = document.querySelectorAll('.team-btn');
+const teamCountSlider = document.getElementById('team-count-slider');
+const teamCountDisplay = document.getElementById('team-count-display');
+const teamNamesPreview = document.getElementById('team-names-preview');
 const diffBtns = document.querySelectorAll('.diff-btn');
 const timeSlider = document.getElementById('time-slider');
 const timeDisplay = document.getElementById('time-display');
@@ -76,12 +87,11 @@ const toStartBtn = document.getElementById('to-start-btn');
 const pauseBtn = document.getElementById('pause-btn');
 const continueBtn = document.getElementById('continue-btn');
 const nextTeamNameEl = document.getElementById('next-team-name');
-const intermediateTeamAEl = document.getElementById('intermediate-team-a');
-const intermediateTeamBEl = document.getElementById('intermediate-team-b');
 
 const currentTeamEl = document.getElementById('current-team');
-const teamAScoreEl = document.getElementById('team-a-score');
-const teamBScoreEl = document.getElementById('team-b-score');
+const scoreDisplayEl = document.getElementById('score-display');
+const intermediateScoresEl = document.getElementById('intermediate-scores');
+const finalScoresEl = document.getElementById('final-scores');
 const timerEl = document.getElementById('timer');
 const wordEl = document.getElementById('word');
 
@@ -89,21 +99,20 @@ const guessedBtn = document.getElementById('guessed-btn');
 const skippedBtn = document.getElementById('skipped-btn');
 const playAgainBtn = document.getElementById('play-again-btn');
 
-const finalTeamAEl = document.getElementById('final-team-a');
-const finalTeamBEl = document.getElementById('final-team-b');
 const trophyAnimEl = document.getElementById('trophy-animation');
 const winnerMessageEl = document.getElementById('winner-message');
 const resultTitleEl = document.getElementById('result-title');
 const statsEl = document.getElementById('stats');
 
-// Team selection
-teamBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        teamBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        gameState.team = btn.dataset.team;
+// Team count slider
+if (teamCountSlider) {
+    teamCountSlider.addEventListener('input', (e) => {
+        const count = parseInt(e.target.value);
+        gameState.teamCount = count;
+        teamCountDisplay.textContent = count;
+        generateTeamNamesPreview();
     });
-});
+}
 
 // Difficulty selection
 diffBtns.forEach(btn => {
@@ -141,6 +150,49 @@ function updateTimeDisplay() {
 
 function updateTargetScoreDisplay() {
     targetScoreDisplay.textContent = gameState.targetScore;
+}
+
+// Generate random team names
+function generateRandomTeamNames(count) {
+    const shuffled = [...TEAM_NAMES].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count).map((name, index) => ({
+        name: name,
+        score: 0,
+        id: index
+    }));
+}
+
+// Update team names preview on start screen
+function generateTeamNamesPreview() {
+    if (!teamNamesPreview) return;
+    
+    const count = gameState.teamCount;
+    const teams = generateRandomTeamNames(count);
+    
+    teamNamesPreview.innerHTML = teams.map(t =>
+        `<div class="team-preview-item">${t.name}</div>`
+    ).join('');
+}
+
+// Update score display in game screen (dynamic for any number of teams)
+function updateScoreDisplay() {
+    if (!scoreDisplayEl) return;
+    
+    scoreDisplayEl.innerHTML = gameState.teams.map((team, index) => `
+        <div class="team-score" data-team-index="${index}">
+            <span>${team.name.charAt(0)}</span>
+            <span>${team.score}</span>
+        </div>
+    `).join('');
+}
+
+// Update current team indicator
+function updateTeamDisplay() {
+    if (gameState.teams.length === 0) return;
+    const currentTeam = gameState.teams[gameState.currentTeamIndex];
+    if (currentTeamEl) {
+        currentTeamEl.textContent = currentTeam.name;
+    }
 }
 
 // Send to bot
@@ -225,16 +277,12 @@ function showStart() {
     updateTimeDisplay();
     updateTargetScoreDisplay();
     
-    // Alternate team selection for new game (opposite of last team)
-    const oppositeTeam = lastTeam === 'A' ? 'B' : 'A';
-    teamBtns.forEach(btn => {
-        if (btn.dataset.team === oppositeTeam) {
-            btn.classList.add('active');
-            gameState.team = oppositeTeam;
-        } else {
-            btn.classList.remove('active');
-        }
-    });
+    // Initialize team count slider if first time
+    if (teamCountSlider) {
+        teamCountSlider.value = gameState.teamCount;
+        teamCountDisplay.textContent = gameState.teamCount;
+        generateTeamNamesPreview();
+    }
 }
 
 function showGame() {
@@ -260,14 +308,22 @@ function showIntermediate() {
     resultScreen.classList.remove('active');
     if (intermediateScreen) intermediateScreen.classList.add('active');
     
-    // Update intermediate scores
-    if (intermediateTeamAEl) intermediateTeamAEl.textContent = gameState.teamAScore;
-    if (intermediateTeamBEl) intermediateTeamBEl.textContent = gameState.teamBScore;
+    // Update intermediate scores dynamically
+    if (intermediateScoresEl) {
+        intermediateScoresEl.innerHTML = gameState.teams.map((team, index) => `
+            <div class="score-card ${index === 0 ? 'team-a' : index === 1 ? 'team-b' : ''}">
+                <div class="team-icon">${index === 0 ? '🔵' : index === 1 ? '🟠' : '⚪'}</div>
+                <h3>${team.name}</h3>
+                <p class="score">${team.score}</p>
+            </div>
+        `).join('');
+    }
     
     // Show which team will explain next
-    const nextTeam = gameState.team === 'A' ? 'Б' : 'А';
+    const nextTeamIndex = (gameState.currentTeamIndex + 1) % gameState.teams.length;
+    const nextTeam = gameState.teams[nextTeamIndex];
     if (nextTeamNameEl) {
-        nextTeamNameEl.textContent = `Команда ${nextTeam}`;
+        nextTeamNameEl.textContent = nextTeam.name;
     }
 }
 
@@ -279,24 +335,26 @@ function startGame() {
     }
     
     // Reset state for new game
-    gameState.teamAScore = 0;
-    gameState.teamBScore = 0;
+    const teams = generateRandomTeamNames(gameState.teamCount);
+    gameState.teams = teams;
+    gameState.currentTeamIndex = lastTeamIndex;
     gameState.usedWords = new Set();
     gameState.timeLeft = gameState.roundTime;
     gameState.gameOver = false;
     gameState.isPaused = false;
+    pauseBtn.textContent = '⏸️ Пауза';
     
-    // Team is already selected in showStart() - keep it for this game session
-    
+    updateScoreDisplay();
     updateTeamDisplay();
     updateTimer();
     
     // Send start to bot with current team
+    const currentTeam = gameState.teams[gameState.currentTeamIndex];
     sendToBot({
         action: 'start_game',
         difficulty: gameState.difficulty,
         roundTime: gameState.roundTime,
-        team: gameState.team,
+        team: currentTeam.name,
         targetScore: gameState.targetScore
     });
     
@@ -312,9 +370,9 @@ function startGame() {
 
 // Continue to next round (from intermediate screen)
 function continueToNextRound() {
-    // Switch team for next round
-    gameState.team = gameState.team === 'A' ? 'B' : 'A';
-    lastTeam = gameState.team;
+    // Switch to next team in circular order
+    gameState.currentTeamIndex = (gameState.currentTeamIndex + 1) % gameState.teams.length;
+    lastTeamIndex = gameState.currentTeamIndex;
     
     // Reset round state but keep scores
     gameState.usedWords = new Set();
@@ -323,13 +381,15 @@ function continueToNextRound() {
     gameState.isPaused = false;
     pauseBtn.textContent = '⏸️ Пауза';
     
+    updateScoreDisplay();
     updateTeamDisplay();
     updateTimer();
     
     // Send continue to bot
+    const currentTeam = gameState.teams[gameState.currentTeamIndex];
     sendToBot({
         action: 'continue_round',
-        team: gameState.team,
+        team: currentTeam.name,
         targetScore: gameState.targetScore
     });
     
@@ -395,7 +455,7 @@ function startTimer() {
             console.log('Timer expired, checking target score');
             sendToBot({ action: 'game_over' });
             
-            const maxScore = Math.max(gameState.teamAScore, gameState.teamBScore);
+            const maxScore = Math.max(...gameState.teams.map(t => t.score));
             if (maxScore >= gameState.targetScore) {
                 console.log('Target score reached, showing final results');
                 showResults();
@@ -416,9 +476,9 @@ function updateTimer() {
 
 // Update team display
 function updateTeamDisplay() {
-    currentTeamEl.textContent = `Команда ${gameState.team}`;
-    teamAScoreEl.textContent = gameState.teamAScore;
-    teamBScoreEl.textContent = gameState.teamBScore;
+    if (gameState.teams.length === 0) return;
+    const currentTeam = gameState.teams[gameState.currentTeamIndex];
+    currentTeamEl.textContent = currentTeam.name;
 }
 
 // Handle guessed
@@ -430,15 +490,14 @@ function handleGuessed() {
     }
     
     // Add point to current team (the team that is explaining)
-    if (gameState.team === 'A') {
-        gameState.teamAScore++;
-    } else {
-        gameState.teamBScore++;
-    }
+    const currentTeam = gameState.teams[gameState.currentTeamIndex];
+    currentTeam.score++;
+    
+    updateScoreDisplay();
     updateTeamDisplay();
     
     // Send to bot with team info
-    sendToBot({ action: 'guessed', team: gameState.team });
+    sendToBot({ action: 'guessed', team: currentTeam.name });
     
     // Do NOT switch team - same team continues explaining for the entire timer
     
@@ -454,8 +513,10 @@ function handleSkipped() {
         return;
     }
     
+    const currentTeam = gameState.teams[gameState.currentTeamIndex];
+    
     // Send to bot with team info
-    sendToBot({ action: 'skipped', team: gameState.team });
+    sendToBot({ action: 'skipped', team: currentTeam.name });
     
     // Do NOT switch team - same team continues explaining for the entire timer
     
@@ -465,8 +526,11 @@ function handleSkipped() {
 
 // Switch team (double click)
 function switchTeam() {
-    gameState.team = gameState.team === 'A' ? 'B' : 'A';
-    updateTeamDisplay();
+    // Manual team switch (for debugging/override) - cycle through teams
+    if (gameState.teams.length > 0) {
+        gameState.currentTeamIndex = (gameState.currentTeamIndex + 1) % gameState.teams.length;
+        updateTeamDisplay();
+    }
 }
 
 // Toggle pause
@@ -502,7 +566,7 @@ function showResults() {
     gameState.gameOver = true;
     
     // Remember which team just played for next game alternation
-    lastTeam = gameState.team;
+    lastTeamIndex = gameState.currentTeamIndex;
     
     // Clear timer
     if (gameState.timerId) {
@@ -511,32 +575,27 @@ function showResults() {
     }
     
     try {
-        // Update final scores with null checks
-        if (finalTeamAEl) finalTeamAEl.textContent = gameState.teamAScore;
-        if (finalTeamBEl) finalTeamBEl.textContent = gameState.teamBScore;
-        
         // Calculate total words used
         const totalWords = gameState.usedWords.size;
         const totalPossible = wordsLoaded && words ? (words[gameState.difficulty]?.length || 0) : 0;
         
-        console.log('Game stats:', { totalWords, totalPossible, difficulty: gameState.difficulty, teamAScore: gameState.teamAScore, teamBScore: gameState.teamBScore });
+        console.log('Game stats:', { totalWords, totalPossible, difficulty: gameState.difficulty, teams: gameState.teams });
         
-        // Determine winner and set messages
+        // Find winner(s)
+        let maxScore = Math.max(...gameState.teams.map(t => t.score));
+        let winners = gameState.teams.filter(t => t.score === maxScore);
         let winnerMessage = '';
         let resultTitle = '🎉 Поздравляем!';
         let trophyClass = '';
         
-        if (gameState.teamAScore > gameState.teamBScore) {
-            winnerMessage = '🏆 Победила Команда А!';
+        if (winners.length === 1) {
+            // Single winner
+            winnerMessage = `🏆 Победила ${winners[0].name}!`;
             if (winnerMessageEl) winnerMessageEl.className = 'winner team-a';
             trophyClass = 'trophy-a';
-            resultTitle = '🎉 Команда А — чемпионы!';
-        } else if (gameState.teamBScore > gameState.teamAScore) {
-            winnerMessage = '🏆 Победила Команда Б!';
-            if (winnerMessageEl) winnerMessageEl.className = 'winner team-b';
-            trophyClass = 'trophy-b';
-            resultTitle = '🎉 Команда Б — чемпионы!';
+            resultTitle = `🎉 ${winners[0].name} — чемпионы!`;
         } else {
+            // Draw
             winnerMessage = '🤝 Ничья!';
             if (winnerMessageEl) winnerMessageEl.className = 'winner draw';
             trophyClass = 'trophy-draw';
@@ -559,6 +618,18 @@ function showResults() {
                 <p>⏱ Время: <strong>${gameState.roundTime} секунд</strong></p>
                 <p>📖 Использовано слов: <strong>${totalWords} из ${totalPossible}</strong></p>
             `;
+        }
+        
+        // Update final scores dynamically
+        if (finalScoresEl) {
+            finalScoresEl.innerHTML = gameState.teams.map((team, index) => `
+                <div class="final-score-card ${index === 0 ? 'team-a' : index === 1 ? 'team-b' : ''}">
+                    <div class="team-icon">${index === 0 ? '🔵' : index === 1 ? '🟠' : '⚪'}</div>
+                    <h3>${team.name}</h3>
+                    <p class="score">${team.score}</p>
+                    <p class="score-label">очков</p>
+                </div>
+            `).join('');
         }
         
         // Animate trophy
@@ -609,6 +680,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     console.log('Alias Game initialized');
+    
+    // Initialize team count and generate preview
+    gameState.teamCount = 2;
+    if (teamCountDisplay) teamCountDisplay.textContent = 2;
+    generateTeamNamesPreview();
+    
     showWelcome();
     updateTimeDisplay();
 });
