@@ -2,19 +2,48 @@ const { Telegraf } = require('telegraf');
 const words = require('./words.json');
 require('dotenv').config();
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const WEB_APP_URL = process.env.WEB_APP_URL;
+
+console.log('[INIT] Loading environment...');
+console.log('[INIT] BOT_TOKEN:', BOT_TOKEN ? '✓ Set' : '✗ Missing');
+console.log('[INIT] WEB_APP_URL:', WEB_APP_URL || '✗ Missing');
+
+if (!BOT_TOKEN) {
+    console.error('[FATAL] BOT_TOKEN is not set in .env file!');
+    process.exit(1);
+}
+
+const bot = new Telegraf(BOT_TOKEN);
 
 // Store game state per chat
 const games = new Map();
 
+// Log bot startup
+bot.launch().then(() => {
+    console.log('✅ Bot launched successfully and polling for updates...');
+}).catch(err => {
+    console.error('❌ Failed to launch bot:', err);
+    process.exit(1);
+});
+
+// Handle errors
+bot.on('error', (err) => {
+    console.error('❌ Bot error:', err);
+});
+
 bot.start((ctx) => {
+  console.log(`[START] Received /start from user: ${ctx.from?.username || ctx.from?.id}, chatId: ${ctx.chat?.id}`);
+  
   const webAppUrl = process.env.WEB_APP_URL;
   
   if (!webAppUrl) {
+    console.error('[ERROR] WEB_APP_URL is not set!');
     ctx.reply('❌ Ошибка: WEB_APP_URL не настроен. Обратитесь к администратору бота.');
     return;
   }
   
+  console.log('[START] Sending welcome message with Web App button');
   ctx.reply('🎮 Добро пожаловать в игру Alias!\n\nНажмите кнопку ниже чтобы открыть игру:', {
     reply_markup: {
       inline_keyboard: [
@@ -22,6 +51,7 @@ bot.start((ctx) => {
       ]
     }
   });
+  console.log('[START] Welcome message sent');
 });
 
 // Handle web app data from Mini App
@@ -184,10 +214,6 @@ function sendNextWord(ctx, chatId, queryId) {
   }
 }
 
-bot.launch();
-
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
-console.log('✅ Bot started successfully');

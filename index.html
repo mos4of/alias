@@ -2,64 +2,85 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Alias Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
+    <div class="app-container">
         <!-- Welcome Screen -->
         <div id="welcome-screen" class="screen active">
-            <div class="logo">
-                <h1>🎮 ALIAS</h1>
-                <p class="subtitle">Игра на ассоциации для двух команд</p>
-            </div>
-            
-            <div class="intro-text">
-                <p>Добро пожаловать в игру Alias!</p>
-                <p>Одна команда описывает слова, другая угадывает.</p>
-                <p>Цель: набрать как можно больше очков за отведённое время.</p>
-            </div>
-            
-            <button id="to-start-btn" class="primary-btn">▶️ Начать настройку</button>
-        </div>
-        
-        <!-- Start Menu -->
-        <div id="start-screen" class="screen">
-            <div class="section">
-                <h3>Количество команд: <span id="team-count-display">2</span></h3>
-                <div class="slider-container">
-                    <input type="range" id="team-count-slider" min="2" max="6" value="2" step="1">
-                    <div class="slider-labels">
-                        <span>2</span>
-                        <span>3</span>
-                        <span>4</span>
-                        <span>5</span>
-                        <span>6</span>
+            <div class="welcome-content">
+                <div class="logo-section">
+                    <div class="logo-icon">🎮</div>
+                    <h1 class="logo-title">ALIAS</h1>
+                    <p class="logo-subtitle">Игра на ассоциации</p>
+                </div>
+                
+                <div class="stats-card glass-card">
+                    <h3>📊 Статистика</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="total-games">0</span>
+                            <span class="stat-label">Игр сыграно</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="total-words">0</span>
+                            <span class="stat-label">Слов отгадано</span>
+                        </div>
                     </div>
                 </div>
+                
+                <button id="to-start-btn" class="primary-btn pulse">
+                    <span>Начать игру</span>
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
             </div>
-            
-            <div class="section">
-                <h3>Названия команд (сгенерируются автоматически)</h3>
-                <div class="team-names-preview" id="team-names-preview">
-                    <!-- Will be populated by JS -->
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <div class="start-content">
+                <h2 class="section-title">⚙️ Настройки игры</h2>
+                
+                <!-- Team Count -->
+                <div class="config-section glass-card">
+                    <h3>Количество команд</h3>
+                    <div class="team-count-control">
+                        <button class="count-btn minus" id="team-minus">−</button>
+                        <span class="count-value" id="team-count-display">2</span>
+                        <button class="count-btn plus" id="team-plus">+</button>
+                    </div>
+                    <div class="team-names-preview" id="team-names-preview">
+                        <!-- Auto-generated names -->
+                    </div>
                 </div>
-            </div>
-            
-            <div class="section">
-                <h3>Уровень сложности</h3>
-                <div class="difficulty-selector">
-                    <button class="diff-btn active" data-diff="easy">🟢 Легкий</button>
-                    <button class="diff-btn" data-diff="medium">🟡 Средний</button>
-                    <button class="diff-btn" data-diff="hard">🔴 Сложный</button>
+
+                <!-- Difficulty -->
+                <div class="config-section glass-card">
+                    <h3>Сложность</h3>
+                    <div class="difficulty-selector">
+                        <button class="diff-btn active" data-diff="easy">
+                            <span class="diff-icon">🟢</span>
+                            <span>Лёгкая</span>
+                        </button>
+                        <button class="diff-btn" data-diff="medium">
+                            <span class="diff-icon">🟡</span>
+                            <span>Средняя</span>
+                        </button>
+                        <button class="diff-btn" data-diff="hard">
+                            <span class="diff-icon">🔴</span>
+                            <span>Сложная</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="section">
-                <h3>Время на раунд: <span id="time-display">60</span> секунд</h3>
-                <div class="slider-container">
-                    <input type="range" id="time-slider" min="10" max="180" value="60" step="1">
+
+                <!-- Round Time -->
+                <div class="config-section glass-card">
+                    <h3>Время раунда: <span id="time-display">60</span>с</h3>
+                    <input type="range" id="time-slider" min="10" max="180" value="60" step="1" class="slider">
                     <div class="slider-labels">
                         <span>10с</span>
                         <span>1м</span>
@@ -67,12 +88,11 @@
                         <span>3м</span>
                     </div>
                 </div>
-            </div>
-            
-            <div class="section">
-                <h3>Целевой балл для победы: <span id="target-score-display">50</span></h3>
-                <div class="slider-container">
-                    <input type="range" id="target-score-slider" min="10" max="100" value="50" step="5">
+
+                <!-- Target Score -->
+                <div class="config-section glass-card">
+                    <h3>Целевой балл: <span id="target-score-display">50</span></h3>
+                    <input type="range" id="target-score-slider" min="10" max="100" value="50" step="5" class="slider">
                     <div class="slider-labels">
                         <span>10</span>
                         <span>30</span>
@@ -80,65 +100,77 @@
                         <span>100</span>
                     </div>
                 </div>
+
+                <button id="start-btn" class="primary-btn large">
+                    <span>🚀 Начать игру</span>
+                </button>
             </div>
-            
-            <button id="start-btn" class="primary-btn">🚀 Начать игру</button>
         </div>
-        
+
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
-            <div class="game-header">
+            <div class="game-header glass-card">
                 <div class="team-indicator">
-                    <span class="current-team" id="current-team">Команда А</span>
+                    <span class="current-team-badge" id="current-team-badge">Команда А</span>
+                    <span class="round-info">Раунд <span id="round-number">1</span></span>
                 </div>
-                <div class="timer-display">
-                    <span id="timer">60</span>с
+                <div class="timer-circle">
+                    <svg class="timer-svg" viewBox="0 0 100 100">
+                        <circle class="timer-bg" cx="50" cy="50" r="45"/>
+                        <circle class="timer-progress" cx="50" cy="50" r="45" id="timer-circle"/>
+                    </svg>
+                    <div class="timer-text" id="timer-text">60</div>
                 </div>
             </div>
-            
-            <div class="word-card">
-                <div class="word" id="word">Слово</div>
+
+            <div class="word-card glass-card">
+                <div class="word-label">Слово для объяснения</div>
+                <div class="word" id="word">Загрузка...</div>
+                <div class="word-hint" id="word-hint">Опишите понятие, не называя его</div>
             </div>
-            
+
+            <div class="scores-bar">
+                <div class="score-pill team-a" id="score-pill-a">
+                    <span class="team-label">А</span>
+                    <span class="team-score" id="team-a-score">0</span>
+                </div>
+                <div class="score-pill team-b" id="score-pill-b">
+                    <span class="team-label">Б</span>
+                    <span class="team-score" id="team-b-score">0</span>
+                </div>
+            </div>
+
             <div class="controls">
-                <button id="guessed-btn" class="control-btn guessed">✅ Угадали</button>
-                <button id="skipped-btn" class="control-btn skipped">⏭ Пропустить</button>
+                <button id="guessed-btn" class="control-btn guessed">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                    <span>Угадали</span>
+                </button>
+                <button id="skipped-btn" class="control-btn skipped">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span>Пропустить</span>
+                </button>
             </div>
-            
-            <div class="score-display" id="score-display">
-                <!-- Dynamically populated with team scores -->
-            </div>
-            
+
             <div class="secondary-controls">
-                <button id="pause-btn" class="control-btn pause">⏸️ Пауза</button>
+                <button id="pause-btn" class="control-btn pause">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 4h14v16H5z" id="pause-icon-path"/>
+                        <path d="M9 4v16M15 4v16" id="play-icon-path" style="display:none;"/>
+                    </svg>
+                    <span>Пауза</span>
+                </button>
             </div>
         </div>
-        
-        <!-- Result Screen -->
-        <div id="result-screen" class="screen">
-            <div class="result-content">
-                <div class="trophy-animation" id="trophy-animation">
-                    <div class="trophy">🏆</div>
-                </div>
-                
-                <h2 class="result-title" id="result-title">🎉 Поздравляем!</h2>
-                
-                <div class="winner-message" id="winner-message"></div>
-                
-                <div class="final-scores" id="final-scores">
-                    <!-- Dynamically populated -->
-                </div>
-                
-                <div class="stats" id="stats"></div>
-                
-                <button id="play-again-btn" class="primary-btn pulse">🔄 Играть снова</button>
-            </div>
-        </div>
-        
-        <!-- Intermediate Round Screen (between rounds) -->
+
+        <!-- Intermediate Screen -->
         <div id="intermediate-screen" class="screen">
-            <div class="intermediate-content">
-                <h2>🔄 Следующий раунд</h2>
+            <div class="intermediate-content glass-card">
+                <div class="trophy-icon">⏱</div>
+                <h2>Время вышло!</h2>
                 
                 <div class="current-scores" id="intermediate-scores">
                     <!-- Dynamically populated -->
@@ -149,11 +181,35 @@
                     <h3 id="next-team-name">Команда Б</h3>
                 </div>
                 
-                <button id="continue-btn" class="primary-btn pulse">▶️ Начать раунд</button>
+                <button id="continue-btn" class="primary-btn large pulse">
+                    <span>▶️ Начать следующий раунд</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="screen">
+            <div class="result-content glass-card">
+                <div class="trophy-animation" id="trophy-animation">
+                    <div class="trophy">🏆</div>
+                </div>
+                
+                <h2 class="result-title" id="result-title">🎉 Поздравляем!</h2>
+                <div class="winner-message" id="winner-message"></div>
+                
+                <div class="final-scores" id="final-scores">
+                    <!-- Dynamically populated -->
+                </div>
+                
+                <div class="stats" id="stats"></div>
+                
+                <button id="play-again-btn" class="primary-btn large">
+                    <span>🔄 Играть снова</span>
+                </button>
             </div>
         </div>
     </div>
-    
-    <script src="app.js?v=3"></script>
+
+    <script src="app.js?v=4"></script>
 </body>
 </html>
