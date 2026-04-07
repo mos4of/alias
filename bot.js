@@ -37,6 +37,7 @@ bot.on('web_app_data', (ctx) => {
       const difficulty = data.difficulty || 'easy';
       const roundTime = data.roundTime || 60;
       const team = data.team || 'A'; // Get team from Mini App
+      const targetScore = data.targetScore || 50;
       
       // Initialize game state
       games.set(chatId, {
@@ -45,7 +46,8 @@ bot.on('web_app_data', (ctx) => {
         currentTeam: team,
         teamAScore: 0,
         teamBScore: 0,
-        usedWords: new Set()
+        usedWords: new Set(),
+        targetScore: targetScore
       });
       
       // Send first word via WebApp query response
@@ -95,6 +97,8 @@ bot.on('web_app_data', (ctx) => {
       
       if (game) {
         let winnerText = '';
+        const maxScore = Math.max(game.teamAScore, game.teamBScore);
+        
         if (game.teamAScore > game.teamBScore) {
           winnerText = '🏆 Победила Команда А!';
         } else if (game.teamBScore > game.teamAScore) {
@@ -103,9 +107,29 @@ bot.on('web_app_data', (ctx) => {
           winnerText = '🤝 Ничья!';
         }
         
-        ctx.reply(`🏁 Игра окончена!\n\n📊 Итоговый счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\n${winnerText}\n\nДля новой игры нажмите /start`);
-        games.delete(chatId);
+        // Check if target score reached
+        if (maxScore >= game.targetScore) {
+          // Game completely over
+          ctx.reply(`🏁 Игра окончена! Достигнут целевой балл!\n\n📊 Итоговый счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\n${winnerText}\n\nДля новой игры нажмите /start`);
+          games.delete(chatId);
+        } else {
+          // Intermediate round - continue to next round
+          ctx.reply(`⏱ Время вышло! Целевой балл (${game.targetScore}) не достигнут.\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nСледующая команда объясняет.`);
+          // Don't delete game state - continue playing
+        }
       }
+    } else if (data.action === 'continue_round') {
+      const game = games.get(chatId);
+      
+      if (!game) {
+        ctx.reply('❌ Игра не найдена. Начните новую игру с /start');
+        return;
+      }
+      
+      // Update current team (already switched in Mini App)
+      game.currentTeam = data.team;
+      
+      ctx.reply(`🔄 Новый раунд!\n\n📊 Счет сохраняется:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nОбъясняет: Команда ${game.currentTeam}`);
     }
   } catch (e) {
     console.error('Error processing web app data:', e);

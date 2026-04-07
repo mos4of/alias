@@ -44,13 +44,15 @@ let gameState = {
     team: 'A',
     difficulty: 'easy',
     roundTime: 60,
+    targetScore: 50,
     teamAScore: 0,
     teamBScore: 0,
     currentWord: null,
     timeLeft: 60,
     timerId: null,
     usedWords: new Set(),
-    gameOver: false
+    gameOver: false,
+    isPaused: false
 };
 
 // Track last team to alternate between games
@@ -61,13 +63,21 @@ const welcomeScreen = document.getElementById('welcome-screen');
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const resultScreen = document.getElementById('result-screen');
+const intermediateScreen = document.getElementById('intermediate-screen');
 
 const teamBtns = document.querySelectorAll('.team-btn');
 const diffBtns = document.querySelectorAll('.diff-btn');
 const timeSlider = document.getElementById('time-slider');
 const timeDisplay = document.getElementById('time-display');
+const targetScoreSlider = document.getElementById('target-score-slider');
+const targetScoreDisplay = document.getElementById('target-score-display');
 const startBtn = document.getElementById('start-btn');
 const toStartBtn = document.getElementById('to-start-btn');
+const pauseBtn = document.getElementById('pause-btn');
+const continueBtn = document.getElementById('continue-btn');
+const nextTeamNameEl = document.getElementById('next-team-name');
+const intermediateTeamAEl = document.getElementById('intermediate-team-a');
+const intermediateTeamBEl = document.getElementById('intermediate-team-b');
 
 const currentTeamEl = document.getElementById('current-team');
 const teamAScoreEl = document.getElementById('team-a-score');
@@ -110,6 +120,14 @@ timeSlider.addEventListener('input', (e) => {
     updateTimeDisplay();
 });
 
+// Target score slider
+if (targetScoreSlider) {
+    targetScoreSlider.addEventListener('input', (e) => {
+        gameState.targetScore = parseInt(e.target.value);
+        updateTargetScoreDisplay();
+    });
+}
+
 function updateTimeDisplay() {
     const seconds = gameState.roundTime;
     if (seconds >= 60) {
@@ -119,6 +137,10 @@ function updateTimeDisplay() {
     } else {
         timeDisplay.textContent = `${seconds}с`;
     }
+}
+
+function updateTargetScoreDisplay() {
+    targetScoreDisplay.textContent = gameState.targetScore;
 }
 
 // Send to bot
@@ -199,7 +221,9 @@ function showStart() {
     startScreen.classList.add('active');
     gameScreen.classList.remove('active');
     resultScreen.classList.remove('active');
+    if (intermediateScreen) intermediateScreen.classList.remove('active');
     updateTimeDisplay();
+    updateTargetScoreDisplay();
     
     // Alternate team selection for new game (opposite of last team)
     const oppositeTeam = lastTeam === 'A' ? 'B' : 'A';
@@ -218,6 +242,7 @@ function showGame() {
     startScreen.classList.remove('active');
     gameScreen.classList.add('active');
     resultScreen.classList.remove('active');
+    if (intermediateScreen) intermediateScreen.classList.remove('active');
 }
 
 function showResult() {
@@ -225,6 +250,25 @@ function showResult() {
     startScreen.classList.remove('active');
     gameScreen.classList.remove('active');
     resultScreen.classList.add('active');
+    if (intermediateScreen) intermediateScreen.classList.remove('active');
+}
+
+function showIntermediate() {
+    welcomeScreen.classList.remove('active');
+    startScreen.classList.remove('active');
+    gameScreen.classList.remove('active');
+    resultScreen.classList.remove('active');
+    if (intermediateScreen) intermediateScreen.classList.add('active');
+    
+    // Update intermediate scores
+    if (intermediateTeamAEl) intermediateTeamAEl.textContent = gameState.teamAScore;
+    if (intermediateTeamBEl) intermediateTeamBEl.textContent = gameState.teamBScore;
+    
+    // Show which team will explain next
+    const nextTeam = gameState.team === 'A' ? 'Б' : 'А';
+    if (nextTeamNameEl) {
+        nextTeamNameEl.textContent = `Команда ${nextTeam}`;
+    }
 }
 
 // Start game
@@ -234,15 +278,15 @@ function startGame() {
         return;
     }
     
-    // Reset state
+    // Reset state for new game
     gameState.teamAScore = 0;
     gameState.teamBScore = 0;
     gameState.usedWords = new Set();
     gameState.timeLeft = gameState.roundTime;
     gameState.gameOver = false;
+    gameState.isPaused = false;
     
-    // Team is already selected in showStart() - don't reset it here
-    // This allows the team to stay the same for the entire game session
+    // Team is already selected in showStart() - keep it for this game session
     
     updateTeamDisplay();
     updateTimer();
@@ -252,7 +296,8 @@ function startGame() {
         action: 'start_game',
         difficulty: gameState.difficulty,
         roundTime: gameState.roundTime,
-        team: gameState.team
+        team: gameState.team,
+        targetScore: gameState.targetScore
     });
     
     // Pick and show first word
@@ -263,6 +308,63 @@ function startGame() {
     
     // Switch screens
     showGame();
+}
+
+// Continue to next round (from intermediate screen)
+function continueToNextRound() {
+    // Switch team for next round
+    gameState.team = gameState.team === 'A' ? 'B' : 'A';
+    lastTeam = gameState.team;
+    
+    // Reset round state but keep scores
+    gameState.usedWords = new Set();
+    gameState.timeLeft = gameState.roundTime;
+    gameState.gameOver = false;
+    gameState.isPaused = false;
+    
+    updateTeamDisplay();
+    updateTimer();
+    
+    // Send continue to bot
+    sendToBot({
+        action: 'continue_round',
+        team: gameState.team,
+        targetScore: gameState.targetScore
+    });
+    
+    // Pick first word for new round
+    pickNextWord();
+    
+    // Start timer
+    startTimer();
+    
+    // Switch to game screen
+    showGame();
+}
+
+// Toggle pause
+function togglePause() {
+    if (gameState.gameOver) {
+        console.log('Game is over, ignoring pause');
+        return;
+    }
+    
+    gameState.isPaused = !gameState.isPaused;
+    
+    if (gameState.isPaused) {
+        // Pause timer
+        if (gameState.timerId) {
+            clearInterval(gameState.timerId);
+            gameState.timerId = null;
+        }
+        pauseBtn.textContent = '▶️ Продолжить';
+        console.log('Game paused');
+    } else {
+        // Resume timer
+        pauseBtn.textContent = '⏸️ Пауза';
+        startTimer();
+        console.log('Game resumed');
+    }
 }
 
 // Timer
@@ -312,9 +414,9 @@ function updateTeamDisplay() {
 
 // Handle guessed
 function handleGuessed() {
-    // Ignore if game is over
-    if (gameState.gameOver) {
-        console.log('Game is over, ignoring guess');
+    // Ignore if game is over or paused
+    if (gameState.gameOver || gameState.isPaused) {
+        console.log('Game is over or paused, ignoring guess');
         return;
     }
     
@@ -356,6 +458,31 @@ function handleSkipped() {
 function switchTeam() {
     gameState.team = gameState.team === 'A' ? 'B' : 'A';
     updateTeamDisplay();
+}
+
+// Toggle pause
+function togglePause() {
+    if (gameState.gameOver) {
+        console.log('Game is over, ignoring pause');
+        return;
+    }
+    
+    gameState.isPaused = !gameState.isPaused;
+    
+    if (gameState.isPaused) {
+        // Pause timer
+        if (gameState.timerId) {
+            clearInterval(gameState.timerId);
+            gameState.timerId = null;
+        }
+        pauseBtn.textContent = '▶️ Продолжить';
+        console.log('Game paused');
+    } else {
+        // Resume timer
+        pauseBtn.textContent = '⏸️ Пауза';
+        startTimer();
+        console.log('Game resumed');
+    }
 }
 
 // Show results
@@ -455,6 +582,8 @@ startBtn.addEventListener('click', startGame);
 guessedBtn.addEventListener('click', handleGuessed);
 skippedBtn.addEventListener('click', handleSkipped);
 playAgainBtn.addEventListener('click', restartGame);
+continueBtn.addEventListener('click', continueToNextRound);
+pauseBtn.addEventListener('click', togglePause);
 
 // Double click on team name to switch (during game)
 currentTeamEl.addEventListener('dblclick', switchTeam);
