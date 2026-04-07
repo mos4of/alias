@@ -36,14 +36,15 @@ bot.on('web_app_data', (ctx) => {
     if (data.action === 'start_game') {
       const difficulty = data.difficulty || 'easy';
       const roundTime = data.roundTime || 60;
+      const team = data.team || 'A'; // Get team from Mini App
       
       // Initialize game state
       games.set(chatId, {
         difficulty,
         roundTime,
+        currentTeam: team,
         teamAScore: 0,
         teamBScore: 0,
-        currentTeam: 'A',
         usedWords: new Set()
       });
       
@@ -58,21 +59,20 @@ bot.on('web_app_data', (ctx) => {
         return;
       }
       
-      // Add point to current team
+      // Add point to current team (the team that is explaining)
       if (game.currentTeam === 'A') {
         game.teamAScore++;
       } else {
         game.teamBScore++;
       }
       
-      // Switch team
-      game.currentTeam = game.currentTeam === 'A' ? 'B' : 'A';
+      // Do NOT switch team - same team continues explaining
       
       // Send next word via WebApp query response
       sendNextWord(ctx, chatId, queryId);
       
       // Also send score update to chat
-      ctx.reply(`✅ Угадано!\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
+      ctx.reply(`✅ Угадано!\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nОбъясняет: Команда ${game.currentTeam}`);
       
     } else if (data.action === 'skipped') {
       const game = games.get(chatId);
@@ -82,14 +82,13 @@ bot.on('web_app_data', (ctx) => {
         return;
       }
       
-      // Switch team on skip
-      game.currentTeam = game.currentTeam === 'A' ? 'B' : 'A';
+      // Do NOT switch team on skip - same team continues explaining
       
       // Send next word via WebApp query response
       sendNextWord(ctx, chatId, queryId);
       
       // Also send notification to chat
-      ctx.reply(`⏭ Пропущено\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nХодит: Команда ${game.currentTeam}`);
+      ctx.reply(`⏭ Пропущено\n\n📊 Счет:\nКоманда А: ${game.teamAScore}\nКоманда Б: ${game.teamBScore}\n\nОбъясняет: Команда ${game.currentTeam}`);
       
     } else if (data.action === 'game_over') {
       const game = games.get(chatId);

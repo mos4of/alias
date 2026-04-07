@@ -53,6 +53,9 @@ let gameState = {
     gameOver: false
 };
 
+// Track last team to alternate between games
+let lastTeam = 'A';
+
 // DOM elements
 const welcomeScreen = document.getElementById('welcome-screen');
 const startScreen = document.getElementById('start-screen');
@@ -197,6 +200,17 @@ function showStart() {
     gameScreen.classList.remove('active');
     resultScreen.classList.remove('active');
     updateTimeDisplay();
+    
+    // Alternate team selection for new game (opposite of last team)
+    const oppositeTeam = lastTeam === 'A' ? 'B' : 'A';
+    teamBtns.forEach(btn => {
+        if (btn.dataset.team === oppositeTeam) {
+            btn.classList.add('active');
+            gameState.team = oppositeTeam;
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 }
 
 function showGame() {
@@ -225,17 +239,20 @@ function startGame() {
     gameState.teamBScore = 0;
     gameState.usedWords = new Set();
     gameState.timeLeft = gameState.roundTime;
-    gameState.team = 'A'; // Reset to team A
     gameState.gameOver = false;
+    
+    // Team is already selected in showStart() - don't reset it here
+    // This allows the team to stay the same for the entire game session
     
     updateTeamDisplay();
     updateTimer();
     
-    // Send start to bot
+    // Send start to bot with current team
     sendToBot({
         action: 'start_game',
         difficulty: gameState.difficulty,
-        roundTime: gameState.roundTime
+        roundTime: gameState.roundTime,
+        team: gameState.team
     });
     
     // Pick and show first word
@@ -301,7 +318,7 @@ function handleGuessed() {
         return;
     }
     
-    // Add point to current team
+    // Add point to current team (the team that is explaining)
     if (gameState.team === 'A') {
         gameState.teamAScore++;
     } else {
@@ -312,9 +329,7 @@ function handleGuessed() {
     // Send to bot with team info
     sendToBot({ action: 'guessed', team: gameState.team });
     
-    // Switch team
-    gameState.team = gameState.team === 'A' ? 'B' : 'A';
-    updateTeamDisplay();
+    // Do NOT switch team - same team continues explaining for the entire timer
     
     // Pick next word
     pickNextWord();
@@ -331,9 +346,7 @@ function handleSkipped() {
     // Send to bot with team info
     sendToBot({ action: 'skipped', team: gameState.team });
     
-    // Switch team
-    gameState.team = gameState.team === 'A' ? 'B' : 'A';
-    updateTeamDisplay();
+    // Do NOT switch team - same team continues explaining for the entire timer
     
     // Pick next word
     pickNextWord();
@@ -351,6 +364,9 @@ function showResults() {
     
     // Mark game as over
     gameState.gameOver = true;
+    
+    // Remember which team just played for next game alternation
+    lastTeam = gameState.team;
     
     // Clear timer
     if (gameState.timerId) {
